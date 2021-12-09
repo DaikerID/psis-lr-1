@@ -1,0 +1,7 @@
+spring:
+  data:
+    mongodb:
+      database: movies_data
+  mongodb:
+    embedded:
+      version: 3.0.0

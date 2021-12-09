@@ -1,0 +1,13 @@
+spring:
+  data:
+    mongodb:
+      database: movies_data
+      host: localhost
+      port: 27017
+      username: root
+      password: pass
+      authentication-database: admin
+
+springdoc:
+  swagger-ui:
+    path: /swagger
