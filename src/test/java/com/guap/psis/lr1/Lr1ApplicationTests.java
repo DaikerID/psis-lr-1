@@ -1,7 +1,6 @@
 package com.guap.psis.lr1;
 
 import com.guap.psis.lr1.controoler.exception.ErrorCode;
-import com.guap.psis.lr1.db.repository.MovieRepository;
 import com.guap.psis.lr1.dto.CreateMovieDto;
 import com.guap.psis.lr1.dto.GetMovieDto;
 import org.junit.jupiter.api.DisplayName;
