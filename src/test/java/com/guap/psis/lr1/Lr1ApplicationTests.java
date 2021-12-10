@@ -26,144 +26,138 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureWebTestClient
 class Lr1ApplicationTests {
 
-    @Autowired
-    MovieRepository movieRepository;
+  @Autowired
+  WebTestClient webClient;
 
-    @Autowired
-    WebTestClient webClient;
+  @Test
+  @DisplayName("Testing create movie")
+  void testCreate() {
+    var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
+    webClient.post()
+        .uri("/api/v1/movie")
+        .body(Mono.just(movie), CreateMovieDto.class)
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(GetMovieDto.class)
+        .consumeWith(response -> {
+          var getMovieDto = response.getResponseBody();
 
-    @Test
-    @DisplayName("Testing create movie")
-    void testCreate() {
-        var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
-        var getMovieDto = webClient.post()
-                .uri("/api/v1/movie")
-                .body(Mono.just(movie), CreateMovieDto.class)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(GetMovieDto.class)
-                .returnResult()
-                .getResponseBody();
+          assertThat(getMovieDto).isNotNull();
+          assertThat(getMovieDto.getId()).isNotNull();
+          assertThat(getMovieDto.getName()).isEqualTo(movie.getName());
+          assertThat(getMovieDto.getReleaseDate()).isEqualTo(movie.getReleaseDate());
+          assertThat(getMovieDto.getActorList()).isEqualTo(movie.getActorList());
+        });
+  }
 
-        assertThat(getMovieDto).isNotNull();
-        assertThat(getMovieDto.getId()).isNotNull();
-        assertThat(getMovieDto.getName()).isEqualTo(movie.getName());
-        assertThat(getMovieDto.getReleaseDate()).isEqualTo(movie.getReleaseDate());
-        assertThat(getMovieDto.getActorList()).isEqualTo(movie.getActorList());
-    }
+  @Test
+  @DisplayName("Testing get movie by id")
+  void testGet() {
+    var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
+    var createdMovie = webClient.post()
+        .uri("/api/v1/movie")
+        .body(Mono.just(movie), CreateMovieDto.class)
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(GetMovieDto.class)
+        .returnResult()
+        .getResponseBody();
 
-    @Test
-    @DisplayName("Testing get movie by id")
-    void testGet() {
-        var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
-        var createdMovie = webClient.post()
-                .uri("/api/v1/movie")
-                .body(Mono.just(movie), CreateMovieDto.class)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(GetMovieDto.class)
-                .returnResult()
-                .getResponseBody();
+    assertThat(createdMovie).isNotNull();
+    assertThat(createdMovie.getId()).isNotNull();
 
-        assertThat(createdMovie).isNotNull();
-        assertThat(createdMovie.getId()).isNotNull();
+    webClient.get()
+        .uri(String.format("/api/v1/movie/%s", createdMovie.getId()))
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(GetMovieDto.class)
+        .consumeWith(response -> assertThat(createdMovie).isEqualTo(response.getResponseBody()));
+  }
 
-        var movieFromGet = webClient.get()
-                .uri(String.format("/api/v1/movie/%s", createdMovie.getId()))
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(GetMovieDto.class)
-                .returnResult()
-                .getResponseBody();
+  @Test
+  @DisplayName("Testing get movie by id with expected 404")
+  void testGetWithNotFound() {
 
-        assertThat(createdMovie).isEqualTo(movieFromGet);
-    }
+    var errorMessage = "Movie not found!";
+    webClient.get()
+        .uri("/api/v1/movie/not_valid_id")
+        .exchange()
+        .expectStatus()
+        .isNotFound()
+        .expectBody(ErrorCode.class)
+        .consumeWith(result -> {
+          var errorCode = result.getResponseBody();
+          assertThat(errorCode).isNotNull();
+          assertThat(errorMessage).isEqualTo(errorCode.getMessage());
+        });
+  }
 
-    @Test
-    @DisplayName("Testing get movie by id with expected 404")
-    void testGetWithNotFound() {
+  @Test
+  @DisplayName("Testing get all movie")
+  void testGetAll() {
 
-        var errorMessage = "Movie not found!";
-        var errorCode = webClient.get()
-                .uri("/api/v1/movie/not_valid_id")
-                .exchange()
-                .expectStatus()
-                .isNotFound()
-                .expectBody(ErrorCode.class)
-                .returnResult()
-                .getResponseBody();
+    var moviesBeforeAdd = webClient.get()
+        .uri("/api/v1/movie")
+        .exchange()
+        .expectStatus().isOk()
+        .expectBodyList(GetMovieDto.class)
+        .returnResult()
+        .getResponseBody();
 
-        assertThat(errorCode).isNotNull();
-        assertThat(errorMessage).isEqualTo(errorCode.getMessage());
-    }
+    assertThat(moviesBeforeAdd).isNotNull();
 
-    @Test
-    @DisplayName("Testing get all movie")
-    void testGetAll() {
+    var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
+    var createdMovie = webClient.post()
+        .uri("/api/v1/movie")
+        .body(Mono.just(movie), CreateMovieDto.class)
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(GetMovieDto.class)
+        .returnResult()
+        .getResponseBody();
 
-        var moviesBeforeAdd = webClient.get()
-                .uri("/api/v1/movie")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(GetMovieDto.class)
-                .returnResult()
-                .getResponseBody();
+    assertThat(createdMovie).isNotNull();
+    assertThat(createdMovie.getId()).isNotNull();
 
-        assertThat(moviesBeforeAdd).isNotNull();
+    webClient.get()
+        .uri("/api/v1/movie")
+        .exchange()
+        .expectStatus().isOk()
+        .expectBodyList(GetMovieDto.class)
+        .consumeWith(result -> {
+          var list = result.getResponseBody();
+          assertThat(list).isNotNull();
+          assertThat(list.size()).isEqualTo(moviesBeforeAdd.size() + 1);
+        });
 
+  }
 
-        var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
-        var createdMovie = webClient.post()
-                .uri("/api/v1/movie")
-                .body(Mono.just(movie), CreateMovieDto.class)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(GetMovieDto.class)
-                .returnResult()
-                .getResponseBody();
+  @Test
+  @DisplayName("Testing delete movie")
+  void testDelete() {
+    var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
+    var createdMovie = webClient.post()
+        .uri("/api/v1/movie")
+        .body(Mono.just(movie), CreateMovieDto.class)
+        .exchange()
+        .expectStatus().isOk()
+        .expectBody(GetMovieDto.class)
+        .returnResult()
+        .getResponseBody();
 
-        assertThat(createdMovie).isNotNull();
-        assertThat(createdMovie.getId()).isNotNull();
+    assertThat(createdMovie).isNotNull();
+    assertThat(createdMovie.getId()).isNotNull();
 
-        var moviesAfterAdd = webClient.get()
-                .uri("/api/v1/movie")
-                .exchange()
-                .expectStatus().isOk()
-                .expectBodyList(GetMovieDto.class)
-                .returnResult()
-                .getResponseBody();
+    webClient.delete().uri(String.format("/api/v1/movie/%s", createdMovie.getId()))
+        .exchange()
+        .expectStatus()
+        .isOk();
 
-
-        assertThat(moviesAfterAdd).isNotNull();
-        assertThat(moviesAfterAdd.size()).isEqualTo(moviesBeforeAdd.size() + 1);
-    }
-
-    @Test
-    @DisplayName("Testing delete movie")
-    void testDelete() {
-        var movie = new CreateMovieDto("name", LocalDate.now(), List.of());
-        var createdMovie = webClient.post()
-                .uri("/api/v1/movie")
-                .body(Mono.just(movie), CreateMovieDto.class)
-                .exchange()
-                .expectStatus().isOk()
-                .expectBody(GetMovieDto.class)
-                .returnResult()
-                .getResponseBody();
-
-        assertThat(createdMovie).isNotNull();
-        assertThat(createdMovie.getId()).isNotNull();
-
-        webClient.delete().uri(String.format("/api/v1/movie/%s", createdMovie.getId()))
-                .exchange()
-                .expectStatus()
-                .isOk();
-
-        webClient.get()
-                .uri(String.format("/api/v1/movie/%s", createdMovie.getId()))
-                .exchange()
-                .expectStatus()
-                .isNotFound();
-    }
+    webClient.get()
+        .uri(String.format("/api/v1/movie/%s", createdMovie.getId()))
+        .exchange()
+        .expectStatus()
+        .isNotFound();
+  }
 
 }
