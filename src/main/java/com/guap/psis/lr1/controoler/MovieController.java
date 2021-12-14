@@ -2,10 +2,12 @@ package com.guap.psis.lr1.controoler;
 
 import com.guap.psis.lr1.dto.CreateMovieDto;
 import com.guap.psis.lr1.dto.GetMovieDto;
+import com.guap.psis.lr1.dto.PageRequestDto;
 import com.guap.psis.lr1.service.MovieService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.api.annotations.ParameterObject;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -26,8 +28,8 @@ public class MovieController {
 
     @GetMapping
     @Operation(summary = "Get all movies")
-    public Flux<GetMovieDto> getAllMovies() {
-        return movieService.getMovies();
+    public Flux<GetMovieDto> getAllMovies(@ParameterObject PageRequestDto pageable) {
+        return movieService.getMovies(pageable);
     }
 
     @PostMapping

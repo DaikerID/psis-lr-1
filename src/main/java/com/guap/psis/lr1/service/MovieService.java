@@ -5,8 +5,10 @@ import com.guap.psis.lr1.db.entity.Movie;
 import com.guap.psis.lr1.db.repository.MovieRepository;
 import com.guap.psis.lr1.dto.CreateMovieDto;
 import com.guap.psis.lr1.dto.GetMovieDto;
+import com.guap.psis.lr1.dto.PageRequestDto;
 import com.guap.psis.lr1.mapper.MovieMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
@@ -23,8 +25,8 @@ public class MovieService {
         return getMovie(id).map(movieMapper::mapToDto);
     }
 
-    public Flux<GetMovieDto> getMovies() {
-        return movieRepository.findAll()
+    public Flux<GetMovieDto> getMovies(PageRequestDto pageable) {
+        return movieRepository.findBy(PageRequest.of(pageable.getPageNum(), pageable.getPageSize()))
                 .map(movieMapper::mapToDto);
     }
 
@@ -44,7 +46,7 @@ public class MovieService {
                     movieMapper.updateMovie(movieDto, movie);
                     return movie;
                 })
-                .flatMap(movieRepository::insert)
+                .flatMap(movieRepository::save)
                 .map(movieMapper::mapToDto);
     }
 
